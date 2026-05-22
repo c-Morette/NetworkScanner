@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "dgSpecHash": "trV/kpu9wsE=",
+  "success": true,
+  "projectFilePath": "E:\\NetworkScanner\\NetworkScanner.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\moret\\.nuget\\packages\\arplookup\\2.1.88\\arplookup.2.1.88.nupkg.sha512",
+    "C:\\Users\\moret\\.nuget\\packages\\ipaddressrange\\6.3.0\\ipaddressrange.6.3.0.nupkg.sha512",
+    "C:\\Users\\moret\\.nuget\\packages\\spectre.console\\0.55.2\\spectre.console.0.55.2.nupkg.sha512",
+    "C:\\Users\\moret\\.nuget\\packages\\spectre.console.ansi\\0.55.2\\spectre.console.ansi.0.55.2.nupkg.sha512"
+  ],
+  "logs": []
+}
