@@ -1,0 +1,39 @@
+# Build outputs
+bin/
+obj/
+portable/
+
+# Visual Studio / VS Code user files
+.vs/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# Test and coverage outputs
+TestResults/
+*.trx
+coverage/
+coverage.*
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# OS-generated files
+Thumbs.db
+Desktop.ini
+
+# Other
+Comandos.md
