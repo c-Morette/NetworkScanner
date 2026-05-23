@@ -1,125 +1,115 @@
-# NetworkScanner
+# Network Scanner
 
-Scanner de rede local em .NET com interface de terminal baseada em Spectre.Console. O projeto identifica hosts online em uma faixa de IP, tenta resolver hostname, consulta o endereço MAC por ARP e faz o mapeamento do fabricante a partir da base OUI embutida em `Data/manuf.txt`.
+Scanner de rede local para terminal em **.NET 10** com interface rica baseada em **Spectre.Console**. Informe a faixa de IPs, aguarde a varredura e receba uma tabela com hosts ativos, hostnames, endereços MAC e fabricantes — tudo direto no terminal.
 
-## Visão geral
+![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)
+![Windows x64](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows)
+![License MIT](https://img.shields.io/badge/License-MIT-yellow)
 
-O aplicativo foi pensado para inspeção rápida de redes locais diretamente no terminal. A execução é interativa: você informa a base do IP, define a faixa de hosts e o scanner retorna uma tabela com os dispositivos ativos.
+---
 
-### Recursos
+## Funcionalidades
 
-- Varredura concorrente por ping em uma faixa de IPs.
-- Resolução de hostname por DNS reverso quando disponível.
-- Descoberta de MAC address via ARP para hosts alcançáveis.
-- Identificação de fabricante por OUI usando base local embarcada.
-- Saída em tabela com Spectre.Console.
-- Publicação simples como executável portátil.
+- Varredura **concorrente** de uma faixa de IPs via ping
+- Resolução de **hostname** por DNS reverso quando disponível
+- Descoberta de **MAC address** via ARP para hosts alcançáveis
+- Identificação de **fabricante** por OUI usando base local embarcada (`Data/manuf.txt`)
+- Saída em **tabela interativa** com bordas e cores via Spectre.Console
+- Suporte a **re-varredura** sem reiniciar o programa
+- Publicação como executável **portátil single-file** sem dependência de runtime
 
-## Tecnologias
+### Exemplo de saída
 
-| Componente | Uso |
-| --- | --- |
-| .NET 10 | Runtime e SDK da aplicação |
-| Spectre.Console | Interface interativa e renderização da tabela |
-| ArpLookup | Consulta do endereço MAC via ARP |
-| IPAddressRange | Dependência já referenciada no projeto |
+| IP Address | Host Name | MAC Address | Vendor | Status | Latency |
+|---|---|---|---|---|---|
+| 192.168.1.1 | router | AA:BB:CC:DD:EE:FF | Tp-link Technologies | Online | 2 ms |
+| 192.168.1.10 | desktop | 11:22:33:44:55:66 | Intel Corporate | Online | 5 ms |
+
+---
 
 ## Requisitos
 
-- Para executar a versão publicada `self-contained`, basta Windows x64.
-- Para desenvolver ou rodar via `dotnet run`, é necessário ter o .NET 10 SDK instalado.
-- Acesso à rede local que será escaneada.
-- Permissões suficientes para operações de rede locais.
+**Para rodar o executável publicado:**
+- Windows x64
 
-## Como executar
+**Para desenvolver ou rodar via `dotnet`:**
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Acesso à rede local e permissões suficientes para operações de rede
 
-### Restaurar e compilar
+---
 
-```bash
-dotnet restore
-dotnet build
-```
+## Como usar
 
-### Rodar em modo desenvolvimento
+### Desenvolvimento
 
-```bash
+```powershell
+git clone https://github.com/c-Morette/NetworkScanner.git
+cd NetworkScanner
 dotnet run
 ```
 
-Durante a execução, o programa solicita:
+O programa solicita três informações:
 
-1. Base do IP, por exemplo `192.168.1`
-2. Início da faixa, por exemplo `1`
-3. Fim da faixa, por exemplo `254`
+1. **Base do IP** — por exemplo `192.168.1`
+2. **Início da faixa** — por exemplo `1`
+3. **Fim da faixa** — por exemplo `254`
+
+Ao final da varredura, é possível escolher entre **Scan again** ou **Exit**.
+
+### Executável portátil
+
+Baixe o executável na página de [Releases](../../releases/latest) e execute diretamente — não requer .NET instalado.
+
+---
 
 ## Publicação
 
-Para gerar uma versão portátil single-file para Windows x64:
+Para gerar um executável portátil single-file para Windows x64:
 
-```bash
+```powershell
 dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
 ```
 
-O executável gerado em `portable/` inclui o runtime e não depende de instalação prévia do .NET na máquina de destino.
+O binário gerado em `portable\` inclui o runtime e pode ser distribuído sem dependências externas.
 
-## Exemplo de uso
-
-Fluxo típico:
-
-```text
-Base IP: 192.168.1
-Start range: 1
-End range: 254
-```
-
-Saída esperada:
-
-| IP Address | Host Name | MAC Address | Vendor | Status | Latency |
-| --- | --- | --- | --- | --- | --- |
-| 192.168.1.1 | router | AA:BB:CC:DD:EE:FF | Example Vendor | Online | 2 ms |
+---
 
 ## Estrutura do projeto
 
-```text
-Core/
-  HostResult.cs        # Modelo do resultado de cada host encontrado
-  ScanOptions.cs       # Opções de entrada da varredura
-Services/
-  PingScannerService.cs  # Orquestra ping, hostname, MAC e vendor
-  MacAddressService.cs   # Consulta de MAC via ARP
-  VendorLookupService.cs # Resolução de fabricante via OUI
-UI/
-  ConsoleRenderer.cs   # Interface interativa e renderização da tabela
-Data/
-  manuf.txt            # Base de fabricantes embarcada como recurso
-Program.cs             # Ponto de entrada da aplicação
+```
+NetworkScanner/
+├── Core/
+│   ├── HostResult.cs           # Modelo de resultado de cada host
+│   └── ScanOptions.cs          # Parâmetros de entrada da varredura
+├── Services/
+│   ├── PingScannerService.cs   # Orquestra ping, hostname, MAC e vendor
+│   ├── MacAddressService.cs    # Consulta de MAC address via ARP
+│   └── VendorLookupService.cs  # Identificação de fabricante por OUI
+├── UI/
+│   └── ConsoleRenderer.cs      # Interface interativa e renderização da tabela
+├── Data/
+│   └── manuf.txt               # Base OUI embarcada como recurso do assembly
+└── Program.cs                  # Ponto de entrada
 ```
 
-## Limitações conhecidas
+---
 
-- A descoberta de MAC address normalmente funciona apenas na mesma sub-rede local.
-- Hostnames dependem de DNS reverso ou resolução disponível no ambiente.
-- A varredura considera como resultado final apenas hosts que responderam ao ping.
-- O projeto está configurado para `net10.0`, então exige SDK compatível.
+## Dependências
 
-## Desenvolvimento
+| Pacote | Versão | Uso |
+|---|---|---|
+| [Spectre.Console](https://spectreconsole.net/) | 0.55.2 | Interface interativa e renderização da tabela |
+| [ArpLookup](https://github.com/nikeee/dotnet-arp) | 2.1.88 | Consulta de MAC address via ARP |
+| [IPAddressRange](https://github.com/jsakamoto/ipaddressrange) | 6.3.0 | Manipulação de faixas de IP |
 
-Comandos úteis:
-
-```bash
-dotnet build
-dotnet run
-dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
-```
-
-## Contribuição
-
-Contribuições são bem-vindas. Para manter o histórico limpo:
-
-1. Abra uma issue descrevendo a melhoria ou problema.
-2. Crie uma branch focada em uma única mudança.
-3. Valide a compilação antes de abrir o pull request.
+---
 
 ## Licença
 
-Distribuído sob a licença MIT. Veja [LICENSE](LICENSE) para os termos completos.
+Distribuído sob a licença **MIT** — veja o arquivo [LICENSE](LICENSE).
+
+---
+
+## Contribuindo
+
+Contribuições são bem-vindas. Para reportar bugs ou sugerir melhorias, abra uma [issue](../../issues). Para enviar código, crie um branch focado em uma única mudança e abra um Pull Request.
