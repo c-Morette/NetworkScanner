@@ -1,7 +1,9 @@
 # Build outputs
 bin/
 obj/
-portable/
+
+# Symbols dentro do portable (manter apenas o .exe versionado)
+portable/*.pdb
 
 # Visual Studio / VS Code user files
 .vs/

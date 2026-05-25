@@ -7,5 +7,5 @@ public class HostResult
     public string MacAddress { get; set; } = "-";
     public string Vendor { get; set; } = "-";
     public bool IsOnline { get; set; }
-    public long LatencyMs { get; set; }
+    public long? LatencyMs { get; set; }
 }

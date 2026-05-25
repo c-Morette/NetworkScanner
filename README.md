@@ -10,9 +10,10 @@ Scanner de rede local para terminal em **.NET 10** com interface rica baseada em
 
 ## Funcionalidades
 
-- Varredura **concorrente** de uma faixa de IPs via ping
+- Varredura **concorrente controlada** (até 32 hosts simultâneos) para descobrir dispositivos sem saturar o canal WiFi
+- **Ping com 3 tentativas espaçadas** por destino — pega celulares em modo de economia de energia (Doze) que ignoram o primeiro pacote
+- Descoberta dupla: **ICMP ping** + leitura direta da **tabela ARP do Windows** (via `iphlpapi.dll`) como rede de segurança
 - Resolução de **hostname** por DNS reverso quando disponível
-- Descoberta de **MAC address** via ARP para hosts alcançáveis
 - Identificação de **fabricante** por OUI usando base local embarcada (`Data/manuf.txt`)
 - Saída em **tabela interativa** com bordas e cores via Spectre.Console
 - Suporte a **re-varredura** sem reiniciar o programa
@@ -22,8 +23,12 @@ Scanner de rede local para terminal em **.NET 10** com interface rica baseada em
 
 | IP Address | Host Name | MAC Address | Vendor | Status | Latency |
 |---|---|---|---|---|---|
-| 192.168.1.1 | router | AA:BB:CC:DD:EE:FF | Tp-link Technologies | Online | 2 ms |
-| 192.168.1.10 | desktop | 11:22:33:44:55:66 | Intel Corporate | Online | 5 ms |
+| 192.168.0.1 | router | AABBCCDDEEFF | Tp-link Technologies | Online | 2 ms |
+| 192.168.0.10 | desktop | 112233445566 | Intel Corporate | Online | 5 ms |
+| 192.168.0.42 | - | 9C8E991A2B3C | Samsung Electronics | Online | 87 ms |
+| 192.168.0.55 | - | F0998C112233 | Apple, Inc. | Online | ARP |
+
+Na coluna **Latency**, valor em milissegundos significa que o host respondeu ao ping; a palavra **`ARP`** indica que o host só foi visto pela tabela ARP do sistema (sem resposta ICMP).
 
 ---
 
@@ -40,6 +45,10 @@ Scanner de rede local para terminal em **.NET 10** com interface rica baseada em
 
 ## Como usar
 
+### Executável portátil
+
+O executável já compilado está versionado em [`portable/NetworkScanner.exe`](portable/NetworkScanner.exe) — basta baixar e executar, **não requer .NET instalado**.
+
 ### Desenvolvimento
 
 ```powershell
@@ -50,27 +59,35 @@ dotnet run
 
 O programa solicita três informações:
 
-1. **Base do IP** — por exemplo `192.168.1`
+1. **Base do IP** — por exemplo `192.168.0`
 2. **Início da faixa** — por exemplo `1`
 3. **Fim da faixa** — por exemplo `254`
 
 Ao final da varredura, é possível escolher entre **Scan again** ou **Exit**.
 
-### Executável portátil
-
-Baixe o executável na página de [Releases](../../releases/latest) e execute diretamente — não requer .NET instalado.
+> Uma varredura de `/24` (254 IPs) leva aproximadamente **50 segundos** no pior caso — o tempo é gasto, principalmente, em IPs vazios que aguardam 3 tentativas de ping. Hosts vivos respondem na primeira tentativa e liberam o slot rapidamente.
 
 ---
 
 ## Publicação
 
-Para gerar um executável portátil single-file para Windows x64:
+Para regerar o executável portátil single-file para Windows x64:
 
 ```powershell
 dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
 ```
 
 O binário gerado em `portable\` inclui o runtime e pode ser distribuído sem dependências externas.
+
+---
+
+## Como a descoberta funciona
+
+A combinação de técnicas existe porque dispositivos WiFi modernos (especialmente celulares Android/iOS em modo de economia) frequentemente **descartam o primeiro pacote ICMP** para não acordar a CPU à toa.
+
+1. **Concorrência limitada** a 32 sondagens simultâneas — evita que rajadas de centenas de pings sejam vistas como flood pelo chip WiFi do dispositivo, que descartaria os pacotes em lote.
+2. **Até 3 pings por host**, com 1 segundo de espaçamento entre tentativas — espelha o ritmo do `ping.exe` do Windows e dá tempo do chip acordar a CPU para responder na 2ª ou 3ª tentativa.
+3. **Leitura da tabela ARP do Windows** ao final do scan — captura hosts que, mesmo sem responder ao ping, deixaram entrada válida na tabela após qualquer tráfego anterior.
 
 ---
 
@@ -82,13 +99,16 @@ NetworkScanner/
 │   ├── HostResult.cs           # Modelo de resultado de cada host
 │   └── ScanOptions.cs          # Parâmetros de entrada da varredura
 ├── Services/
-│   ├── PingScannerService.cs   # Orquestra ping, hostname, MAC e vendor
-│   ├── MacAddressService.cs    # Consulta de MAC address via ARP
+│   ├── PingScannerService.cs   # Orquestra ping com retries, throttling, ARP e DNS
+│   ├── ArpTableService.cs      # Lê a tabela ARP do Windows via iphlpapi.dll
+│   ├── MacAddressService.cs    # Consulta de MAC address via ARP (fallback)
 │   └── VendorLookupService.cs  # Identificação de fabricante por OUI
 ├── UI/
 │   └── ConsoleRenderer.cs      # Interface interativa e renderização da tabela
 ├── Data/
 │   └── manuf.txt               # Base OUI embarcada como recurso do assembly
+├── portable/
+│   └── NetworkScanner.exe      # Executável single-file pré-publicado
 └── Program.cs                  # Ponto de entrada
 ```
 
@@ -99,7 +119,7 @@ NetworkScanner/
 | Pacote | Versão | Uso |
 |---|---|---|
 | [Spectre.Console](https://spectreconsole.net/) | 0.55.2 | Interface interativa e renderização da tabela |
-| [ArpLookup](https://github.com/nikeee/dotnet-arp) | 2.1.88 | Consulta de MAC address via ARP |
+| [ArpLookup](https://github.com/nikeee/dotnet-arp) | 2.1.88 | Consulta de MAC address via ARP (fallback) |
 | [IPAddressRange](https://github.com/jsakamoto/ipaddressrange) | 6.3.0 | Manipulação de faixas de IP |
 
 ---

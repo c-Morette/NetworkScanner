@@ -6,66 +6,140 @@ namespace NetworkScanner.Services;
 
 public class PingScannerService
 {
+    private const int ArpSettleDelayMs = 500;
+    private const int PingAttempts = 3;
+    private const int PingRetryDelayMs = 1000;
+    private const int MaxConcurrentProbes = 32;
+
     private readonly MacAddressService _macAddressService = new();
     private readonly VendorLookupService _vendorLookupService = new();
+    private readonly ArpTableService _arpTableService = new();
 
     public async Task<List<HostResult>> ScanAsync(ScanOptions options)
     {
-        var results = new List<HostResult>();
-        var tasks = new List<Task<HostResult>>();
+        // Limita a concorrência para não saturar o WiFi com rajadas que o
+        // chip do celular pode descartar pensando ser flood / ataque.
+        using var probeSemaphore = new SemaphoreSlim(MaxConcurrentProbes);
+
+        var probeTasks = new List<Task<PingProbeResult>>();
 
         for (int i = options.Start; i <= options.End; i++)
         {
             string ip = $"{options.BaseIp}.{i}";
-            tasks.Add(PingAsync(ip, options.TimeoutMs));
+            probeTasks.Add(ProbeWithThrottleAsync(ip, options.TimeoutMs, probeSemaphore));
         }
 
-        var scanResults = await Task.WhenAll(tasks);
+        var probes = await Task.WhenAll(probeTasks);
 
-        results.AddRange(scanResults.Where(result => result.IsOnline));
+        await Task.Delay(ArpSettleDelayMs);
 
-        return results
+        var arpTable = _arpTableService.GetArpTable();
+
+        var resultsByIp = new Dictionary<string, HostResult>(StringComparer.Ordinal);
+
+        var pingedHostTasks = probes
+            .Where(probe => probe.IsAlive)
+            .Select(probe => BuildPingedHostAsync(probe, arpTable))
+            .ToList();
+
+        var pingedResults = await Task.WhenAll(pingedHostTasks);
+
+        foreach (var result in pingedResults)
+            resultsByIp[result.IpAddress] = result;
+
+        var arpOnlyTasks = arpTable
+            .Where(entry => !resultsByIp.ContainsKey(entry.Key) && IsInRange(entry.Key, options))
+            .Select(entry => BuildArpOnlyHostAsync(entry.Key, entry.Value))
+            .ToList();
+
+        var arpOnlyResults = await Task.WhenAll(arpOnlyTasks);
+
+        foreach (var result in arpOnlyResults)
+            resultsByIp[result.IpAddress] = result;
+
+        return resultsByIp.Values
             .OrderBy(result => IPAddress.Parse(result.IpAddress).GetAddressBytes(), new ByteArrayComparer())
             .ToList();
     }
 
-    private async Task<HostResult> PingAsync(string ipAddress, int timeoutMs)
+    private async Task<HostResult> BuildPingedHostAsync(PingProbeResult probe, Dictionary<string, string> arpTable)
     {
-        using var ping = new Ping();
-    
-        try
-        {
-            var reply = await ping.SendPingAsync(ipAddress, timeoutMs);
-    
-            if (reply.Status == IPStatus.Success)
-            {
-                string macAddress = await _macAddressService.GetMacAddressAsync(ipAddress);
-                string vendor = _vendorLookupService.GetVendor(macAddress);
-    
-                return new HostResult
-                {
-                    IpAddress = ipAddress,
-                    HostName = await TryGetHostNameAsync(ipAddress),
-                    MacAddress = macAddress,
-                    Vendor = vendor,
-                    IsOnline = true,
-                    LatencyMs = reply.RoundtripTime
-                };
-            }
-        }
-        catch
-        {
-            // Ignora IPs que falharem.
-        }
-    
+        string macAddress = arpTable.TryGetValue(probe.IpAddress, out string? arpMac)
+            ? arpMac
+            : await _macAddressService.GetMacAddressAsync(probe.IpAddress);
+
         return new HostResult
         {
-            IpAddress = ipAddress,
-            HostName = "-",
-            MacAddress = "-",
-            Vendor = "-",
-            IsOnline = false,
-            LatencyMs = 0
+            IpAddress = probe.IpAddress,
+            HostName = await TryGetHostNameAsync(probe.IpAddress),
+            MacAddress = macAddress,
+            Vendor = _vendorLookupService.GetVendor(macAddress),
+            IsOnline = true,
+            LatencyMs = probe.LatencyMs
+        };
+    }
+
+    private async Task<HostResult> BuildArpOnlyHostAsync(string ip, string mac)
+    {
+        return new HostResult
+        {
+            IpAddress = ip,
+            HostName = await TryGetHostNameAsync(ip),
+            MacAddress = mac,
+            Vendor = _vendorLookupService.GetVendor(mac),
+            IsOnline = true,
+            LatencyMs = null
+        };
+    }
+
+    private static async Task<PingProbeResult> ProbeWithThrottleAsync(string ip, int timeoutMs, SemaphoreSlim semaphore)
+    {
+        await semaphore.WaitAsync();
+
+        try
+        {
+            return await TryPingAsync(ip, timeoutMs);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    private static async Task<PingProbeResult> TryPingAsync(string ip, int timeoutMs)
+    {
+        using var ping = new Ping();
+
+        for (int attempt = 0; attempt < PingAttempts; attempt++)
+        {
+            if (attempt > 0)
+                await Task.Delay(PingRetryDelayMs);
+
+            try
+            {
+                var reply = await ping.SendPingAsync(ip, timeoutMs);
+
+                if (reply.Status == IPStatus.Success)
+                {
+                    return new PingProbeResult
+                    {
+                        IpAddress = ip,
+                        IsAlive = true,
+                        LatencyMs = reply.RoundtripTime
+                    };
+                }
+            }
+            catch
+            {
+                // Tenta o próximo attempt.
+            }
+        }
+
+        return new PingProbeResult
+        {
+            IpAddress = ip,
+            IsAlive = false,
+            LatencyMs = null
         };
     }
 
@@ -90,15 +164,37 @@ public class PingScannerService
     {
         if (string.IsNullOrWhiteSpace(hostName))
             return "-";
-    
+
         string cleanName = hostName.Trim();
-    
+
         int dotIndex = cleanName.IndexOf('.');
-    
+
         if (dotIndex > 0)
             cleanName = cleanName[..dotIndex];
-    
+
         return cleanName;
+    }
+
+    private static bool IsInRange(string ip, ScanOptions options)
+    {
+        string prefix = options.BaseIp + ".";
+
+        if (!ip.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        string lastOctet = ip[prefix.Length..];
+
+        if (!int.TryParse(lastOctet, out int octet))
+            return false;
+
+        return octet >= options.Start && octet <= options.End;
+    }
+
+    private sealed class PingProbeResult
+    {
+        public string IpAddress { get; init; } = string.Empty;
+        public bool IsAlive { get; init; }
+        public long? LatencyMs { get; init; }
     }
 }
 

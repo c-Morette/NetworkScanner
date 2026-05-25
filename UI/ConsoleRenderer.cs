@@ -31,7 +31,7 @@ public static class ConsoleRenderer
             BaseIp = baseIp,
             Start = start,
             End = end,
-            TimeoutMs = 1000
+            TimeoutMs = 1500
         };
     }
 
@@ -57,13 +57,17 @@ public static class ConsoleRenderer
 
         foreach (var host in hosts)
         {
-           table.AddRow(
+            string latencyMarkup = host.LatencyMs.HasValue
+                ? $"[yellow]{host.LatencyMs} ms[/]"
+                : "[grey]ARP[/]";
+
+            table.AddRow(
                 $"[white]{host.IpAddress}[/]",
                 $"[grey]{host.HostName}[/]",
                 $"[blue]{host.MacAddress}[/]",
                 $"[yellow]{host.Vendor}[/]",
                 "[green]Online[/]",
-                $"[yellow]{host.LatencyMs} ms[/]");
+                latencyMarkup);
         }
 
         AnsiConsole.Write(table);
