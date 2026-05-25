@@ -5,4 +5,5 @@ public class ScanOptions
     public int Start { get; set; } = 1;
     public int End { get; set; } = 254;
     public int TimeoutMs { get; set; } = 1500;
+    public int MaxConcurrentProbes { get; set; } = 32;
 }

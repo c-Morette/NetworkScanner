@@ -18,20 +18,25 @@ public static class ConsoleRenderer
         AnsiConsole.WriteLine();
     }
 
-    public static ScanOptions AskScanOptions()
+    public static ScanOptions AskScanOptions(ScanOptions defaults)
     {
         string baseIp = AnsiConsole.Ask<string>(
             "Enter the base IP, example [yellow]192.168.1[/]:");
 
-        int start = AnsiConsole.Ask<int>("Start range:", 1);
-        int end = AnsiConsole.Ask<int>("End range:", 254);
+        int start = AnsiConsole.Ask<int>("Start range:", defaults.Start);
+        int end = AnsiConsole.Ask<int>("End range:", defaults.End);
+
+        int concurrent = defaults.MaxConcurrentProbes > 0
+            ? defaults.MaxConcurrentProbes
+            : AnsiConsole.Ask<int>("Parallel IP checks:", 32);
 
         return new ScanOptions
         {
             BaseIp = baseIp,
             Start = start,
             End = end,
-            TimeoutMs = 1500
+            TimeoutMs = defaults.TimeoutMs,
+            MaxConcurrentProbes = concurrent
         };
     }
 

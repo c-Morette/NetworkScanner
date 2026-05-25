@@ -9,7 +9,6 @@ public class PingScannerService
     private const int ArpSettleDelayMs = 500;
     private const int PingAttempts = 3;
     private const int PingRetryDelayMs = 1000;
-    private const int MaxConcurrentProbes = 32;
 
     private readonly MacAddressService _macAddressService = new();
     private readonly VendorLookupService _vendorLookupService = new();
@@ -19,7 +18,8 @@ public class PingScannerService
     {
         // Limita a concorrência para não saturar o WiFi com rajadas que o
         // chip do celular pode descartar pensando ser flood / ataque.
-        using var probeSemaphore = new SemaphoreSlim(MaxConcurrentProbes);
+        int concurrentProbes = options.MaxConcurrentProbes > 0 ? options.MaxConcurrentProbes : 32;
+        using var probeSemaphore = new SemaphoreSlim(concurrentProbes);
 
         var probeTasks = new List<Task<PingProbeResult>>();
 
