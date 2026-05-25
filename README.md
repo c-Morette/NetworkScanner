@@ -29,7 +29,7 @@ Baixe a versão mais recente em:
 
 | Sistema | Arquivo |
 |---------|---------|
-| Windows x64 | `NetworkScanner-win-x64.exe` |
+| Windows x64 | `NetworkScanner.exe` |
 
 O executável publicado já inclui o runtime necessário para execução.
 
@@ -40,7 +40,7 @@ O executável publicado já inclui o runtime necessário para execução.
 Execute o arquivo baixado:
 
 ```powershell
-.\NetworkScanner-win-x64.exe
+.\NetworkScanner.exe
 ```
 
 O programa solicita três informações:
@@ -85,13 +85,13 @@ dotnet run
 Para gerar o executável single-file para Windows x64:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:AssemblyName=NetworkScanner-win-x64 -o .\bin\Release\net10.0\win-x64\publish
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
 ```
 
 Arquivo esperado para anexar na release:
 
 ```text
-bin/Release/net10.0/win-x64/publish/NetworkScanner-win-x64.exe
+portable/NetworkScanner.exe
 ```
 
 ---
@@ -124,6 +124,8 @@ NetworkScanner/
 │   └── ConsoleRenderer.cs      # Interface interativa e renderização da tabela
 ├── Data/
 │   └── manuf.txt               # Base OUI embarcada como recurso do assembly
+├── portable/
+│   └── NetworkScanner.exe      # Executável single-file publicado
 ├── Program.cs                  # Ponto de entrada
 ├── NetworkScanner.csproj
 └── README.md

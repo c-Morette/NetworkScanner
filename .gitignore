@@ -3,6 +3,8 @@ bin/
 obj/
 
 # Symbols dentro do portable (manter apenas o .exe versionado)
+!portable/
+!portable/NetworkScanner.exe
 portable/*.pdb
 
 # Visual Studio / VS Code user files
