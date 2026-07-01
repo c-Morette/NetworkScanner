@@ -95,17 +95,26 @@ dotnet run
 
 ## Publicação
 
-Para gerar o executável single-file para Windows x64:
+O projeto é multi-target (`net10.0;net6.0`), então `-f` é obrigatório no `dotnet publish`.
+
+**Build principal (Windows 10/11, x64):**
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
+dotnet publish -c Release -f net10.0 -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\portable
 ```
 
-Arquivo esperado para anexar na release:
+Gera `portable/NetworkScanner.exe`.
 
-```text
-portable/NetworkScanner.exe
+**Build Windows 7 (net6, x86)** — o mesmo executável serve para Win7 de 32 e 64 bits. Empacote junto com o lançador versionado `build/Iniciar-Win7.cmd`:
+
+```powershell
+dotnet publish -c Release -f net6.0 -r win-x86 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o .\portable-win7
+Copy-Item .\build\Iniciar-Win7.cmd .\portable-win7\
+Remove-Item .\portable-win7\*.pdb -ErrorAction SilentlyContinue
+Compress-Archive -Path .\portable-win7\* -DestinationPath .\NetworkScanner-win7-x86.zip -Force
 ```
+
+Anexe `NetworkScanner-win7-x86.zip` (contém `NetworkScanner.exe` + `Iniciar-Win7.cmd`) na release.
 
 ---
 

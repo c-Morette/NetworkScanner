@@ -6,10 +6,11 @@
     <TargetFrameworks>net10.0;net6.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- Permite usar C# moderno (collection expressions etc.) mesmo no alvo net6.0. -->
-    <LangVersion>latest</LangVersion>
-    <!-- net6.0 é EOL de propósito (único .NET moderno que roda no Win7 SP1); silencia os avisos de TFM. -->
+    <!-- C# 13 fixo (não "latest"): cobre o código atual e evita features net10-only que quebrariam o alvo net6.0. -->
+    <LangVersion>13.0</LangVersion>
+    <!-- net6.0 é EOL de propósito (único .NET moderno que roda no Win7 SP1). Silencia o aviso de pacote sem suporte a net6 e o NETSDK1138 (EOL). -->
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
