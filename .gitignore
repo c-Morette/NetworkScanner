@@ -7,6 +7,9 @@ obj/
 !portable/NetworkScanner.exe
 portable/*.pdb
 
+# Build Win7 (net6) — distribuído apenas via release, não versionado
+portable-win7/
+
 # Visual Studio / VS Code user files
 .vs/
 .claude/

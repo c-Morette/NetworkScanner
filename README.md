@@ -29,9 +29,22 @@ Baixe a versão mais recente em:
 
 | Sistema | Arquivo |
 |---------|---------|
-| Windows x64 | `NetworkScanner.exe` |
+| Windows 10 / 11 (x64) | `NetworkScanner.exe` |
+| Windows 7 SP1 (x86) | `NetworkScanner-win7-x86.zip` |
 
 O executável publicado já inclui o runtime necessário para execução.
+
+### Windows 7
+
+O build principal é **.NET 10**, que **não suporta Windows 7** (o .NET 7 em diante exige Windows 10 1607+). Por isso existe um build separado em **.NET 6** (último runtime que roda no Windows 7 SP1), publicado em **x86** — o mesmo executável serve para Windows 7 de **32 e 64 bits**.
+
+Baixe o `NetworkScanner-win7-x86.zip`, extraia e execute **`Iniciar-Win7.cmd`** (não o `.exe` direto). O lançador confere os pré-requisitos do sistema antes de abrir e avisa o que instalar se faltar algo.
+
+Pré-requisitos no Windows 7:
+
+- **Windows 7 SP1** com Windows Update em dia
+- **Visual C++ 2015-2019 Redistributable (x86)** — instala UCRT + `vcruntime140`/`msvcp140`
+- **Atualização SHA-2 (KB4474419)** — necessária para o runtime .NET carregar
 
 ---
 
